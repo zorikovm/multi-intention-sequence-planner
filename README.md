@@ -1,77 +1,123 @@
 # Планировщик последовательности интенций
 
-В исходном FB pi-Switch агент на каждом шаге выбирает одну интенцию. На длинных
-маршрутах этого может быть недостаточно: для достижения цели необходимо заранее
-учесть последовательность коридоров и поворотов.
+В исходном FB pi-Switch агент периодически выбирает одну латентную интенцию и
+передает ее низкоуровневой политике. Здесь поверх уже обученных и замороженных
+FB-представлений добавлен планировщик, который сначала строит путь через
+несколько промежуточных состояний, а затем исполняет его как последовательность
+локальных задач.
 
-В этом проекте поверх замороженных FB-представлений и политик добавлен
-high-level планировщик. Он строит граф промежуточных состояний из
-офлайн-датасета, находит маршрут до цели и исполняет его как последовательность
-латентных интенций. Механизм не обучается и не использует дополнительное
-взаимодействие со средой.
+Ничего дополнительно не обучается: используются исходные `F`, `B`, low-level
+policy и high-level actor. Планировщик работает только по офлайн-датасету и не
+строит модель будущих состояний или траекторий.
 
-Код основан на репозитории
+Код основан на
 [Switching Successor Measures](https://github.com/stestoKTH/switching-successor-measures).
 
-## Результат
+## Результаты
 
-Сравнение проведено на antmaze-medium-navigate-v0: пять задач, 20 эпизодов на
-задачу, сиды 0, 1, 2.
+### AntMaze Medium
+
+Финальное сравнение: 5 задач, 20 эпизодов на задачу, seed 0, 1, 2.
 
 | Метод | T1 | T2 | T3 | T4 | T5 | Overall |
 |---|---:|---:|---:|---:|---:|---:|
 | Single-intention baseline | 0.900 | 0.867 | 0.833 | 0.533 | 0.783 | 0.783 |
 | Sequence planner | 0.900 | 0.867 | 0.833 | **0.800** | 0.783 | **0.837** |
 
-Для T1, T2, T3 и T5 планировщик построил маршруты-кандидаты, но gate отклонил
-их во всех эпизодах, поэтому управление полностью осталось у исходного
-baseline. На T4 последовательность исполнялась в 52 из 60 эпизодов.
+Получилось 251/300 успешных эпизодов против 235/300 у исходного контроллера.
+Весь прирост пришелся на длинную T4. На остальных задачах планировщик находил
+возможные маршруты, но по их геометрии определял, что дополнительное
+планирование не нужно, и оставлял управление исходному контроллеру.
 
-Полные результаты находятся в
-[results/final_results.csv](results/final_results.csv). Исходные CSV,
-параметры запусков и парные исходы эпизодов сохранены в
-[experiments/](experiments/). Последовательность гипотез и экспериментов
-описана в [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md), подробный отчет находится в
-[REPORT.md](REPORT.md).
+Для T4 повторный парный прогон дал 48/60 против 32/60, exact McNemar
+`p = 0.0070`.
+
+### AntMaze Large
+
+После medium я отдельно проверил перенос на `antmaze-large-navigate-v0`.
+Простое перенесение тех же правил оказалось ненадежным: граф находил длинные
+пути, но агент часто застревал на локальной цели или возвращался к похожему
+участку маршрута.
+
+Поэтому финальный вариант для large сделан осторожнее: последовательность
+используется только для достаточно длинного, но не чрезмерно обходного пути;
+после первого застревания управление до конца эпизода возвращается исходному
+контроллеру.
+
+Финальный парный прогон T2/T4/T5: по 20 эпизодов, три seed, 180 эпизодов на
+метод.
+
+| Метод | T2 | T4 | T5 | Overall |
+|---|---:|---:|---:|---:|
+| Baseline | 0.350 | 0.283 | 0.200 | 0.278 |
+| Safe hybrid | 0.350 | 0.283 | **0.217** | **0.283** |
+
+Это 50/180 против 51/180. В парном сравнении было 17 исправленных и 16
+испорченных эпизодов, exact McNemar `p = 1.0`. Поэтому large не считаю
+подтверждением улучшения: результат практически нейтральный. Он скорее показал
+главное ограничение текущего метода — оценка ребер по FB недостаточно надежно
+предсказывает исполнимость длинной последовательности.
+
+Подробный разбор находится в [REPORT.md](REPORT.md), хронология экспериментов —
+в [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
+
+## Как здесь используется FB
+
+В упрощенной записи successor measure факторизуется как
+
+$$
+M_z(s,w) \approx F(s,z)^\top B(w).
+$$
+
+`F(s,z)` описывает будущее поведение из текущего состояния при интенции `z`, а
+`B(w)` кодирует состояние `w`. Чем больше скалярное произведение, тем сильнее
+модель связывает текущее поведение с будущим посещением `w`.
+
+Есть полезная аналогия с attention: `F` можно мысленно воспринимать как `Q`, а
+`B` как `K`. Тогда $F^\top B$ играет роль меры совместимости запроса и ключа.
+Это именно аналогия, а не буквальный attention: здесь нет обычного softmax по
+токенам и отдельного `V`, а смысл представлений задается successor measures.
+
+Для ребра `s -> w` используется нормированная оценка
+
+$$
+H(s,w)=\frac{M_{z_w}(s,w)}{M_{z_w}(w,w)}, \qquad z_w=B(w).
+$$
+
+На практике это только приближенная мера достижимости. В large-диагностике
+сырое отношение нередко было больше 1, поэтому код ограничивает его сверху и
+отдельно сохраняет диагностику такой некалиброванности.
 
 ## Метод
 
-Планировщик выбирает 256 промежуточных состояний из офлайн-датасета и
-сопоставляет состоянию w замороженную интенцию B(w). Между близкими состояниями
-строится разреженный ориентированный граф. Ребра оцениваются через
-консервативную FB-оценку достижимости. Алгоритм Дейкстры находит
-последовательность промежуточных интенций.
+1. Из офлайн-датасета выбираются 256 реальных состояний методом farthest-point
+   sampling по XY.
+2. Каждому состоянию `w` сопоставляется латент `B(w)`.
+3. Для каждого узла рассматриваются 12 ближайших соседей; ребра оцениваются
+   через замороженные FB-представления.
+4. По стоимости `-log(reachability) + switch_cost` Дейкстра находит путь к
+   цели.
+5. Из пути исполняется каждый третий промежуточный узел. Каждая локальная цель
+   передается исходному high-level actor, который уже выбирает интенцию для
+   low-level policy.
+6. Если последовательность по признакам маршрута не нужна или становится
+   ненадежной, управление остается у исходного single-intention контроллера.
 
-Для исполнения используются исходные high-level actor и low-level policy. На
-коротких маршрутах управление остается у single-intention baseline.
-
-Основная реализация находится в
-[utils/multiswitch_planner.py](utils/multiswitch_planner.py). Более подробное
-описание алгоритма приведено в [MULTISWITCH.md](MULTISWITCH.md).
+Основная реализация: [utils/multiswitch_planner.py](utils/multiswitch_planner.py).
 
 ## Установка
 
 Эксперименты проводились с Python 3.11.15, JAX 0.4.38 на CPU и OGBench 1.1.4.
-Точный способ создать окружение через [uv](https://docs.astral.sh/uv/):
 
-~~~bash
+```bash
 uv venv --python 3.11.15 .venv
 source .venv/bin/activate
 uv pip install -r requirements-eval-cpu.txt
-~~~
+```
 
-Если Python 3.11 уже установлен, можно использовать обычный `venv` и `pip`:
+Для medium нужны:
 
-~~~bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements-eval-cpu.txt
-~~~
-
-Чекпоинт и датасеты должны находиться в следующих путях:
-
-~~~text
+```text
 artifacts/
   checkpoints/medium/
     flags.json
@@ -79,81 +125,57 @@ artifacts/
   data/
     antmaze-medium-navigate-v0.npz
     antmaze-medium-navigate-v0-val.npz
-~~~
+```
 
-Загрузка checkpoint и датасетов:
+Исходная папка с чекпоинтами:
+[Google Drive](https://drive.google.com/drive/folders/1dKYhaDJH9lUREo-kUV3AwmTLrxvKO7Ek).
+Датасеты OGBench доступны по адресу
+`https://rail.eecs.berkeley.edu/datasets/ogbench/`.
 
-~~~bash
-mkdir -p artifacts/data artifacts/checkpoints/medium
+## Запуск Medium
 
-gdown --no-cookies 1r0wR4il8LIbrPKRMakEckCR4MOs7romJ \
-  -O artifacts/checkpoints/medium/flags.json
-gdown --no-cookies 1683zzDk5v4m2Otad6I2E0TsoYBcGypqB \
-  -O artifacts/checkpoints/medium/params.pkl
-
-wget -P artifacts/data \
-  https://rail.eecs.berkeley.edu/datasets/ogbench/antmaze-medium-navigate-v0.npz
-wget -P artifacts/data \
-  https://rail.eecs.berkeley.edu/datasets/ogbench/antmaze-medium-navigate-v0-val.npz
-~~~
-
-Исходная папка с checkpoint находится
-[здесь](https://drive.google.com/drive/folders/1dKYhaDJH9lUREo-kUV3AwmTLrxvKO7Ek).
-
-Проверка входных файлов:
-
-~~~bash
-sha256sum -c results/checksums.txt
-~~~
-
-## Запуск
-
-Короткая проверка:
-
-~~~bash
-bash scripts/evaluate_cpu.sh baseline 0 1 smoke_baseline
-bash scripts/evaluate_cpu.sh multiswitch 0 1 smoke_sequence
-~~~
-
-Полное сравнение, 300 эпизодов на каждый метод:
-
-~~~bash
+```bash
 for seed in 0 1 2; do
   bash scripts/evaluate_cpu.sh baseline "$seed" 20 final_baseline
   bash scripts/evaluate_cpu.sh multiswitch "$seed" 20 final_sequence
 done
-~~~
-
-Парный прогон задачи 4:
-
-~~~bash
-for seed in 0 1 2; do
-  bash scripts/evaluate_cpu.sh baseline "$seed" 20 confirm_task4_baseline \
-    --eval_tasks=4
-  bash scripts/evaluate_cpu.sh multiswitch "$seed" 20 confirm_task4_sequence \
-    --eval_tasks=4
-done
-~~~
+```
 
 Подсчет итоговых метрик:
 
-~~~bash
+```bash
 .venv/bin/python scripts/summarize_results.py
-~~~
+```
 
-Проверка кода:
+## Запуск Large
 
-~~~bash
+Для large используются соответствующие датасет и чекпоинт в
+`artifacts/data/` и `artifacts/checkpoints/large/`.
+
+```bash
+for seed in 0 1 2; do
+  bash scripts/evaluate_large_cpu.sh baseline "$seed" 20 final_large_baseline
+  bash scripts/evaluate_large_cpu.sh multiswitch "$seed" 20 final_large_safehybrid
+ done
+```
+
+В финальном large-прогоне оценивались задачи `2,4,5`.
+
+## Проверка кода
+
+```bash
 .venv/bin/python -m pytest -q
 .venv/bin/python -m py_compile \
   main.py agents/fbpiswitch.py utils/evaluation.py utils/multiswitch_planner.py
-~~~
+```
 
 ## Основные файлы
 
-- utils/multiswitch_planner.py — построение графа и исполнение маршрута;
-- utils/evaluation.py — детерминированное парное сравнение;
-- scripts/evaluate_cpu.sh — запуск baseline и planner;
-- scripts/summarize_results.py — расчет итоговых метрик;
-- results/ — финальная конфигурация и агрегированные результаты;
-- experiments/ — исходные результаты всех экспериментов.
+- `utils/multiswitch_planner.py` — граф, поиск пути и исполнение;
+- `utils/evaluation.py` — парное детерминированное сравнение;
+- `scripts/evaluate_cpu.sh` — medium;
+- `scripts/evaluate_large_cpu.sh` — large;
+- `results/` — итоговые таблицы и конфигурации;
+- `experiments/` — исходные medium-логи;
+- `REPORT.md` — результаты и анализ ошибок;
+- `EXPERIMENT_LOG.md` — последовательность экспериментов.
