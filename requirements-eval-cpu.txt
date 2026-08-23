@@ -1,5 +1,6 @@
 distrax==0.1.5
 flax==0.10.2
+gdown==5.2.0
 gymnasium==0.29.1
 h5py==3.12.1
 jax[cpu]==0.4.38
