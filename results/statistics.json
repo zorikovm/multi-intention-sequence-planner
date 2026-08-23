@@ -1,0 +1,35 @@
+{
+  "baseline": {
+    "successes": 235,
+    "trials": 300,
+    "mean": 0.7833333333333333,
+    "seed_sample_std": 0.05773502691896256,
+    "wilson_95": [0.7332901513759227, 0.8262121649301679],
+    "task4_successes": 32,
+    "task4_trials": 60,
+    "task4_wilson_95": [0.4089342702715789, 0.6537209395856151]
+  },
+  "sequence_planner": {
+    "successes": 251,
+    "trials": 300,
+    "mean": 0.8366666666666667,
+    "seed_sample_std": 0.005773502691896199,
+    "wilson_95": [0.7906268325698749, 0.8741935668055973],
+    "task4_successes": 48,
+    "task4_trials": 60,
+    "task4_wilson_95": [0.6821819419437211, 0.8817149467710251]
+  },
+  "paired_seed_delta": {
+    "values": [0.09, -0.02, 0.09],
+    "mean": 0.05333333333333334,
+    "sample_std": 0.06350852961085876,
+    "student_t_95_df_2": [-0.10443060009674654, 0.21109726676341323]
+  },
+  "paired_task4_mcnemar": {
+    "pairs": 60,
+    "improved": 24,
+    "regressed": 8,
+    "discordant": 32,
+    "exact_two_sided_p": 0.0070003666914999485
+  }
+}

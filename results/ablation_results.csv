@@ -1,0 +1,17 @@
+stage,variant,seeds,episodes_per_task,tasks,mean_success,task4_success,decision
+discarded,original_unpaired_baseline,"0;1;2",20,"1;2;3;4;5",0.7833,0.7000,"discard: action-space reset RNG was not seeded"
+screen,paired_baseline,"0;1;2",5,"1;2;3;4;5",0.7467,0.4000,control
+screen,direct_low_actor_graph,0,5,"1;2;3;4;5",0.5200,0.2000,"reject: local latents were poorly executable"
+screen,nested_high_actor_all_routes,0,5,"1;2;3;4;5",0.4800,0.6000,"retain executor; add safe gate"
+screen,route_count_gate_24,"0;1;2",5,"1;2;3;4;5",0.7067,0.5333,"reject: sensitive to landmark graph seed"
+screen,fixed_graph_seed,"0;1;2",5,"1;2;3;4;5",0.7600,0.4667,"retain fixed graph; improve gate"
+screen,route_excess_22_stride_3,"0;1;2",5,"1;2;3;4;5",0.7867,0.6000,retain
+screen,route_excess_20_stride_3,"0;1;2",5,"1;2;3;4;5",0.7733,0.6000,"reject: false activation harmed task 5"
+ablation,route_stride_1,0,10,4,0.6000,0.6000,tie
+ablation,route_stride_2,0,10,4,0.4000,0.4000,reject
+ablation,route_stride_3,0,10,4,0.6000,0.6000,"retain: equal success with fewer switches"
+ablation,tolerance_2_0,"0;1;2",10,4,0.6667,0.6667,runner_up
+ablation,patient_executor,"0;1;2",10,4,0.6000,0.6000,reject
+ablation,fast_executor,"0;1;2",10,4,0.7667,0.7667,retain
+final,single_intention_baseline,"0;1;2",20,"1;2;3;4;5",0.7833,0.5333,control
+final,sequence_planner,"0;1;2",20,"1;2;3;4;5",0.8367,0.8000,selected

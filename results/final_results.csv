@@ -1,0 +1,9 @@
+method,seed,task_1_success,task_2_success,task_3_success,task_4_success,task_5_success,overall_success,episodes_per_task,total_episodes
+single_intention_baseline,0,0.80,0.90,0.90,0.45,0.70,0.75,20,100
+single_intention_baseline,1,1.00,0.85,0.80,0.80,0.80,0.85,20,100
+single_intention_baseline,2,0.90,0.85,0.80,0.35,0.85,0.75,20,100
+sequence_planner,0,0.80,0.90,0.90,0.90,0.70,0.84,20,100
+sequence_planner,1,1.00,0.85,0.80,0.70,0.80,0.83,20,100
+sequence_planner,2,0.90,0.85,0.80,0.80,0.85,0.84,20,100
+single_intention_baseline,mean,0.9000,0.8667,0.8333,0.5333,0.7833,0.7833,20,300
+sequence_planner,mean,0.9000,0.8667,0.8333,0.8000,0.7833,0.8367,20,300

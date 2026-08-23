@@ -1,0 +1,47 @@
+{
+  "method": "offline_fb_sequence_planner",
+  "training": "none",
+  "environment": "ogbench-antmaze-medium-navigate-v0",
+  "checkpoint": {
+    "path": "artifacts/checkpoints/medium/params.pkl",
+    "sha256": "c7efb93cf2caba0d311b87a1c73313b5fe6acda93e7122f47eea5db665858bfe"
+  },
+  "frozen_modules": [
+    "forward_repr",
+    "backward_repr",
+    "actor",
+    "high_actor"
+  ],
+  "planner": {
+    "planner_seed": 0,
+    "landmarks": 256,
+    "landmark_candidates": 20000,
+    "spatial_neighbors": 12,
+    "max_waypoints": 32,
+    "min_reachability": 1e-6,
+    "uncertainty_penalty": 0.5,
+    "switch_cost": 0.02,
+    "min_route_excess": 22.0,
+    "route_stride": 3,
+    "waypoint_tolerance": 1.75,
+    "max_subgoal_steps": 120,
+    "stall_steps": 40,
+    "replan_on_waypoint": false,
+    "use_high_actor_for_waypoints": true,
+    "allow_direct_goal": false
+  },
+  "evaluation": {
+    "seeds": [0, 1, 2],
+    "tasks": [1, 2, 3, 4, 5],
+    "episodes_per_task": 20,
+    "paired_episode_seed_formula": "eval_seed * 1000000 + task_id * 10000 + episode_index",
+    "temperature": 0.0,
+    "videos": 0,
+    "device": "cpu"
+  },
+  "software": {
+    "python": "3.11.15",
+    "jax": "0.4.38",
+    "ogbench": "1.1.4"
+  }
+}

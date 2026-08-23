@@ -1,0 +1,13 @@
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Large downloaded inputs.
+artifacts/
+deliverables/
+
+# Experiment CSV/JSONL/flags are intentionally versioned in this archive.
+
+# Local experiment integrations.
+wandb/
