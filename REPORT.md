@@ -88,18 +88,25 @@ $$
 
 6. Дейкстра находит путь к цели через несколько промежуточных состояний.
 
-Для ансамбля forward-представлений используется
+Для ансамбля из $K$ forward-представлений используется
 
 $$
-r(i,j)=\exp\left(\operatorname{mean}_e \log q_e
--\beta\operatorname{std}_e\log q_e\right),
+r(i,j)=\exp\left(
+\frac{1}{K}\sum_{e=1}^{K}\log q_e
+-\beta\sqrt{\frac{1}{K}\sum_{e=1}^{K}
+\left(\log q_e-\frac{1}{K}\sum_{k=1}^{K}\log q_k\right)^2}
+\right),
 $$
 
 где
 
 $$
-q_e=\operatorname{clip}\left(
-\frac{M_e(w_i,z_j,w_j)}{M_e(w_j,z_j,w_j)},\varepsilon,1
+q_e=\min\left(
+1,
+\max\left(
+\varepsilon,
+\frac{M_e(w_i,z_j,w_j)}{M_e(w_j,z_j,w_j)}
+\right)
 \right).
 $$
 
