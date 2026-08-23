@@ -52,6 +52,15 @@ baseline. На T4 последовательность исполнялась в
 ## Установка
 
 Эксперименты проводились с Python 3.11.15, JAX 0.4.38 на CPU и OGBench 1.1.4.
+Точный способ создать окружение через [uv](https://docs.astral.sh/uv/):
+
+~~~bash
+uv venv --python 3.11.15 .venv
+source .venv/bin/activate
+uv pip install -r requirements-eval-cpu.txt
+~~~
+
+Если Python 3.11 уже установлен, можно использовать обычный `venv` и `pip`:
 
 ~~~bash
 python3.11 -m venv .venv
@@ -72,19 +81,24 @@ artifacts/
     antmaze-medium-navigate-v0-val.npz
 ~~~
 
-Medium checkpoint можно скачать из
-[папки с чекпоинтами](https://drive.google.com/drive/folders/1dKYhaDJH9lUREo-kUV3AwmTLrxvKO7Ek).
-Если файл называется params_1000000.pkl, его нужно переименовать в params.pkl.
-
-Датасеты:
+Загрузка checkpoint и датасетов:
 
 ~~~bash
 mkdir -p artifacts/data artifacts/checkpoints/medium
+
+gdown --no-cookies 1r0wR4il8LIbrPKRMakEckCR4MOs7romJ \
+  -O artifacts/checkpoints/medium/flags.json
+gdown --no-cookies 1683zzDk5v4m2Otad6I2E0TsoYBcGypqB \
+  -O artifacts/checkpoints/medium/params.pkl
+
 wget -P artifacts/data \
   https://rail.eecs.berkeley.edu/datasets/ogbench/antmaze-medium-navigate-v0.npz
 wget -P artifacts/data \
   https://rail.eecs.berkeley.edu/datasets/ogbench/antmaze-medium-navigate-v0-val.npz
 ~~~
+
+Исходная папка с checkpoint находится
+[здесь](https://drive.google.com/drive/folders/1dKYhaDJH9lUREo-kUV3AwmTLrxvKO7Ek).
 
 Проверка входных файлов:
 
