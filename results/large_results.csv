@@ -1,0 +1,9 @@
+method,task,successes,episodes,success_rate
+baseline,2,21,60,0.350000
+baseline,4,17,60,0.283333
+baseline,5,12,60,0.200000
+baseline,overall,50,180,0.277778
+safe_hybrid,2,21,60,0.350000
+safe_hybrid,4,17,60,0.283333
+safe_hybrid,5,13,60,0.216667
+safe_hybrid,overall,51,180,0.283333
