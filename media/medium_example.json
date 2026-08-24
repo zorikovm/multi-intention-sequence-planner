@@ -1,0 +1,12 @@
+{
+  "task_id": 4,
+  "eval_seed": 0,
+  "episode": 1,
+  "episode_seed": 40001,
+  "baseline_success": 0,
+  "planner_success": 1,
+  "baseline_steps": 1000,
+  "planner_steps": 760,
+  "image": "medium_t4_seed40001.png",
+  "video": "medium_t4_seed40001.mp4"
+}
