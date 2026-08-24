@@ -1,0 +1,25 @@
+{
+  "protocol": {
+    "tasks": [2, 4, 5],
+    "seeds": [0, 1, 2],
+    "episodes_per_task": 20,
+    "episodes_per_method": 180
+  },
+  "baseline": {
+    "seed_success_rates": [0.2833333333333334, 0.31666666666666665, 0.2333333333333333],
+    "task_successes": {"2": 21, "4": 17, "5": 12},
+    "successes": 50,
+    "success_rate": 0.2777777777777778
+  },
+  "planner": {
+    "seed_success_rates": [0.2833333333333334, 0.26666666666666666, 0.3],
+    "task_successes": {"2": 21, "4": 17, "5": 13},
+    "successes": 51,
+    "success_rate": 0.2833333333333333
+  },
+  "paired": {
+    "improved": 17,
+    "regressed": 16,
+    "exact_mcnemar_two_sided_p": 1.0
+  }
+}

@@ -21,6 +21,7 @@ class PlannerConfig:
     uncertainty_penalty: float = 0.5
     switch_cost: float = 0.02
     waypoint_tolerance: float = 1.75
+    terminal_tolerance: float = 0.5
     max_subgoal_steps: int = 120
     stall_steps: int = 40
     replan_on_waypoint: bool = False
@@ -28,9 +29,10 @@ class PlannerConfig:
     use_high_actor_for_waypoints: bool = True
     min_route_waypoints: int = 0
     min_route_detour: float = 0.0
+    max_route_detour: float = float('inf')
     min_route_excess: float = 22.0
     max_route_excess: float = float('inf')
-    disable_after_stall: bool = False
+    max_replans_before_fallback: int = -1
     route_stride: int = 3
     seed: int = 0
     inference_batch_size: int = 4096
@@ -128,6 +130,7 @@ class MultiSwitchPlanner:
         self.task_latent: Optional[np.ndarray] = None
         self._cached_goal_edges: Optional[Dict[int, Tuple[float, float]]] = None
         self.route: List[int] = []
+        self.active_node: Optional[int] = None
         self.active_target: Optional[np.ndarray] = None
         self.active_position: Optional[np.ndarray] = None
         self.active_latent: Optional[np.ndarray] = None
@@ -230,6 +233,7 @@ class MultiSwitchPlanner:
         self.task_latent = np.asarray(task_latent) if task_latent is not None else self.goal_latent
         self._cached_goal_edges = None
         self.route = []
+        self.active_node = None
         self.active_target = None
         self.active_position = None
         self.active_latent = None
@@ -247,7 +251,10 @@ class MultiSwitchPlanner:
             'initial_route_detour': 0.0,
             'initial_route_excess': 0.0,
             'executed_route_waypoints': 0.0,
-            'disabled_after_stall': 0.0,
+            'failed_targets': 0.0,
+            'stall_replans': 0.0,
+            'timeout_replans': 0.0,
+            'planner_abandoned': 0.0,
         }
         self.enabled = True
         self._plan(np.asarray(observation), is_replan=False)
@@ -348,9 +355,11 @@ class MultiSwitchPlanner:
 
     def _set_active_target(self):
         if not self.route:
+            self.active_node = None
             self.active_target = self.active_position = self.active_latent = None
             return
         target = self.route[0]
+        self.active_node = target
         if target == self.num_landmarks:
             self.active_target = self.goal
             self.active_position = self.goal_position
@@ -390,6 +399,7 @@ class MultiSwitchPlanner:
             self.enabled = (
                 route_waypoints >= self.config.min_route_waypoints
                 and route_detour >= self.config.min_route_detour
+                and route_detour <= self.config.max_route_detour
                 and route_excess >= self.config.min_route_excess
                 and route_excess <= self.config.max_route_excess
             )
@@ -421,8 +431,9 @@ class MultiSwitchPlanner:
     def _disable_planner(self):
         self.enabled = False
         self.route = []
+        self.active_node = None
         self.active_target = self.active_position = self.active_latent = None
-        self.metrics['disabled_after_stall'] = 1.0
+        self.metrics['planner_abandoned'] = 1.0
 
     def sample_action(self, observation, temperature=0.0):
         if self.goal is None:
@@ -430,7 +441,12 @@ class MultiSwitchPlanner:
         observation = np.asarray(observation)
         if self.active_target is not None:
             distance = float(np.linalg.norm(self._position(observation) - self.active_position))
-            if distance <= self.config.waypoint_tolerance:
+            tolerance = (
+                self.config.terminal_tolerance
+                if self.active_node == self.num_landmarks
+                else self.config.waypoint_tolerance
+            )
+            if distance <= tolerance:
                 self._advance_or_replan(observation)
             else:
                 if distance + 1e-4 < self.best_target_distance:
@@ -442,7 +458,15 @@ class MultiSwitchPlanner:
         timed_out = self.active_target is not None and self.steps_on_target >= self.config.max_subgoal_steps
         stalled = self.active_target is not None and self.steps_without_progress >= self.config.stall_steps
         if timed_out or stalled:
-            if self.config.disable_after_stall:
+            self.metrics['failed_targets'] += 1.0
+            if stalled:
+                self.metrics['stall_replans'] += 1.0
+            else:
+                self.metrics['timeout_replans'] += 1.0
+            if (
+                self.config.max_replans_before_fallback >= 0
+                and self.metrics['replans'] >= self.config.max_replans_before_fallback
+            ):
                 self._disable_planner()
             else:
                 self._plan(observation, is_replan=True)

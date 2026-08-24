@@ -1,0 +1,40 @@
+{
+  "environment": "ogbench-antmaze-large-navigate-v0",
+  "tasks": [2, 4, 5],
+  "evaluation_seeds": [0, 1, 2],
+  "episodes_per_task": 20,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.15",
+    "jax": "0.4.38",
+    "jaxlib": "0.4.38",
+    "ogbench": "1.1.4"
+  },
+  "planner": {
+    "seed": 0,
+    "num_landmarks": 256,
+    "landmark_candidates": 20000,
+    "num_neighbors": 12,
+    "max_waypoints": 32,
+    "min_reachability": 1e-06,
+    "uncertainty_penalty": 0.5,
+    "switch_cost": 0.02,
+    "min_route_waypoints": 20,
+    "min_route_detour": 0.0,
+    "max_route_detour": 4.0,
+    "min_route_excess": 22.0,
+    "route_stride": 3,
+    "waypoint_tolerance": 1.75,
+    "terminal_tolerance": 0.5,
+    "max_subgoal_steps": 120,
+    "stall_steps": 40,
+    "max_replans_before_fallback": 0,
+    "allow_direct_goal": false,
+    "use_high_actor_for_waypoints": true
+  },
+  "sha256": {
+    "checkpoint_params": "36208d32d869b3d4fb11608934139767d95f8c9754143cac0df44c7691727cf2",
+    "dataset_train": "2dbe946ac107ca5ac524f82f7a72efa951ceab0be915201d6b32e612d823f2e7",
+    "dataset_validation": "e9a4126825faefb57c34c29f1ee423858dbc4b6f71d9a9846a8b8bdb908b44a1"
+  }
+}

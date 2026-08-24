@@ -30,25 +30,13 @@ common_args=(
 if [[ "$method" == "baseline" ]]; then
   exec .venv/bin/python main.py "${common_args[@]}" "$@"
 elif [[ "$method" == "multiswitch" || "$method" == "safe_hybrid" ]]; then
-  # Large showed that repeatedly rebuilding a bad route can consume most of
-  # the episode.  This wrapper keeps the medium planner unchanged, but makes
-  # the first timeout/stall terminal for the outer planner: the rest of the
-  # episode is executed by the released single-intention controller.
-  exec .venv/bin/python - "${common_args[@]}" --multiswitch "$@" <<'PY'
-import sys
-from absl import app
-import main
-
-BasePlannerConfig = main.PlannerConfig
-
-def SafePlannerConfig(**kwargs):
-    kwargs['disable_after_stall'] = True
-    return BasePlannerConfig(**kwargs)
-
-main.PlannerConfig = SafePlannerConfig
-sys.argv[0] = 'main.py'
-app.run(main.main)
-PY
+  exec .venv/bin/python main.py "${common_args[@]}" \
+    --multiswitch \
+    --multiswitch_terminal_tolerance=0.5 \
+    --multiswitch_min_route_waypoints=20 \
+    --multiswitch_max_route_detour=4.0 \
+    --multiswitch_max_replans_before_fallback=0 \
+    "$@"
 else
   echo "unknown method: $method" >&2
   exit 2

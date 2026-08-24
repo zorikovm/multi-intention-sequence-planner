@@ -102,6 +102,85 @@ class MultiSwitchPlannerTest(unittest.TestCase):
         self.assertGreater(planner.get_metrics()['initial_route_waypoints'], 1.0)
         np.testing.assert_array_equal(planner.sample_action(np.asarray([-1.0, 0.0])), np.zeros(2))
 
+    def _make_planner(self, **overrides):
+        positions = np.stack([np.arange(6), np.zeros(6)], axis=-1).astype(np.float32)
+        kwargs = dict(
+            num_landmarks=6,
+            landmark_candidates=6,
+            num_neighbors=2,
+            max_waypoints=6,
+            min_reachability=1e-8,
+            uncertainty_penalty=0.0,
+            switch_cost=0.0,
+            waypoint_tolerance=1.0,
+            terminal_tolerance=0.5,
+            min_route_excess=0.0,
+            route_stride=1,
+            seed=0,
+        )
+        kwargs.update(overrides)
+        return MultiSwitchPlanner(
+            _FakeAgent(),
+            dataset_observations=positions,
+            dataset_positions=positions,
+            config=PlannerConfig(**kwargs),
+        )
+
+    def test_terminal_goal_uses_stricter_tolerance(self):
+        planner = self._make_planner()
+        goal = np.asarray([6.0, 0.0], dtype=np.float32)
+        planner.reset(np.asarray([-1.0, 0.0], dtype=np.float32), goal)
+        planner.route = [planner.num_landmarks]
+        planner._set_active_target()
+
+        planner.sample_action(np.asarray([5.25, 0.0], dtype=np.float32))
+        self.assertEqual(planner.get_metrics()['waypoints_reached'], 0.0)
+        planner.sample_action(np.asarray([5.6, 0.0], dtype=np.float32))
+        self.assertEqual(planner.get_metrics()['waypoints_reached'], 1.0)
+
+    def test_maximum_detour_can_disable_route(self):
+        planner = self._make_planner(
+            min_route_waypoints=1,
+            max_route_detour=1.1,
+        )
+        observation = np.asarray([0.0, 0.0], dtype=np.float32)
+        goal = np.asarray([0.5, 0.0], dtype=np.float32)
+        farthest = int(np.argmax(planner.landmark_positions[:, 0]))
+        planner._shortest_route = lambda _: [farthest, planner.num_landmarks]
+        planner.reset(observation, goal)
+        self.assertEqual(planner.get_metrics()['planner_enabled'], 0.0)
+
+    def test_zero_replans_falls_back_after_first_stall(self):
+        planner = self._make_planner(
+            waypoint_tolerance=0.1,
+            stall_steps=1,
+            max_replans_before_fallback=0,
+        )
+        observation = np.asarray([-1.0, 0.0], dtype=np.float32)
+        planner.reset(observation, np.asarray([6.0, 0.0], dtype=np.float32))
+        planner.sample_action(observation)
+        planner.sample_action(observation)
+        metrics = planner.get_metrics()
+        self.assertEqual(metrics['failed_targets'], 1.0)
+        self.assertEqual(metrics['stall_replans'], 1.0)
+        self.assertEqual(metrics['replans'], 0.0)
+        self.assertEqual(metrics['planner_abandoned'], 1.0)
+
+    def test_one_replan_is_allowed_before_fallback(self):
+        planner = self._make_planner(
+            waypoint_tolerance=0.1,
+            stall_steps=1,
+            max_replans_before_fallback=1,
+        )
+        observation = np.asarray([-1.0, 0.0], dtype=np.float32)
+        planner.reset(observation, np.asarray([6.0, 0.0], dtype=np.float32))
+        planner.sample_action(observation)
+        planner.sample_action(observation)
+        self.assertEqual(planner.get_metrics()['replans'], 1.0)
+        planner.sample_action(observation)
+        planner.sample_action(observation)
+        self.assertEqual(planner.get_metrics()['planner_abandoned'], 1.0)
+
 
 if __name__ == '__main__':
     unittest.main()

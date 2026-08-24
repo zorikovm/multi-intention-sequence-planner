@@ -90,6 +90,11 @@ flags.DEFINE_float('multiswitch_min_reachability', 1e-6, 'Minimum FB reachabilit
 flags.DEFINE_float('multiswitch_uncertainty_penalty', 0.5, 'Penalty for disagreement between forward heads.')
 flags.DEFINE_float('multiswitch_switch_cost', 0.02, 'Additive cost per intention switch.')
 flags.DEFINE_float('multiswitch_waypoint_tolerance', 1.75, 'XY distance used to mark a waypoint reached.')
+flags.DEFINE_float(
+    'multiswitch_terminal_tolerance',
+    0.5,
+    'XY distance used to mark the final goal reached by the planner.',
+)
 flags.DEFINE_integer('multiswitch_max_subgoal_steps', 120, 'Replan after this many steps on one intention.')
 flags.DEFINE_integer('multiswitch_stall_steps', 40, 'Replan after this many steps without XY progress.')
 flags.DEFINE_bool('multiswitch_replan_on_waypoint', False, 'Replan after reaching each waypoint.')
@@ -103,6 +108,16 @@ flags.DEFINE_integer(
     'multiswitch_min_route_waypoints',
     0,
     'Use sequence planning only when the initial route has at least this many landmarks.',
+)
+flags.DEFINE_float(
+    'multiswitch_max_route_detour',
+    float('inf'),
+    'Use sequence planning only below this route-length / straight-line-distance ratio.',
+)
+flags.DEFINE_integer(
+    'multiswitch_max_replans_before_fallback',
+    -1,
+    'Abandon sequence planning after this many failed replans; negative means unlimited.',
 )
 flags.DEFINE_integer(
     'multiswitch_route_stride',
@@ -210,6 +225,7 @@ def main(_):
                 uncertainty_penalty=FLAGS.multiswitch_uncertainty_penalty,
                 switch_cost=FLAGS.multiswitch_switch_cost,
                 waypoint_tolerance=FLAGS.multiswitch_waypoint_tolerance,
+                terminal_tolerance=FLAGS.multiswitch_terminal_tolerance,
                 max_subgoal_steps=FLAGS.multiswitch_max_subgoal_steps,
                 stall_steps=FLAGS.multiswitch_stall_steps,
                 replan_on_waypoint=FLAGS.multiswitch_replan_on_waypoint,
@@ -217,7 +233,9 @@ def main(_):
                 use_high_actor_for_waypoints=FLAGS.multiswitch_use_high_actor_for_waypoints,
                 min_route_waypoints=FLAGS.multiswitch_min_route_waypoints,
                 min_route_detour=FLAGS.multiswitch_min_route_detour,
+                max_route_detour=FLAGS.multiswitch_max_route_detour,
                 min_route_excess=FLAGS.multiswitch_min_route_excess,
+                max_replans_before_fallback=FLAGS.multiswitch_max_replans_before_fallback,
                 route_stride=FLAGS.multiswitch_route_stride,
                 seed=FLAGS.multiswitch_planner_seed,
             ),
